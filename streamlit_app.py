@@ -103,16 +103,229 @@ def factor_gaps(df, subjects):
 
 
 # -----------------------------------------------------------------------------
-# 1. 파일 업로드
+# 화면 꾸미기: CSS(디자인)와 HTML 조각
+# 배경은 반투명 색을 사용해서 밝은 테마와 어두운 테마 모두에서 잘 보이게 함
 
-st.title("📊 학생 성적 데이터 분석")
-st.write("`StudentsPerformance.csv` 파일을 아래 영역에 드래그 앤 드롭하세요.")
+st.markdown(
+    """
+<style>
+.hero {
+    background: linear-gradient(135deg, #1f5fae 0%, #2a78d6 55%, #1baf7a 100%);
+    border-radius: 18px;
+    padding: 2.2rem 2.4rem;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+}
+.hero.compact { padding: 1.3rem 1.8rem; }
+.hero .badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+.hero h1 { color: #ffffff; font-size: 2.3rem; margin: 0.7rem 0 0.4rem; padding: 0; }
+.hero.compact h1 { font-size: 1.6rem; margin-top: 0.4rem; }
+.hero p { color: rgba(255, 255, 255, 0.92); font-size: 1.05rem; margin: 0; }
+.hero .chips { margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hero .chip {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.88rem;
+}
+.section-title { font-size: 1.25rem; font-weight: 700; margin: 1.6rem 0 0.2rem; }
+.section-desc { opacity: 0.7; margin-bottom: 0.9rem; }
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.9rem;
+}
+.card {
+    background: rgba(128, 128, 128, 0.07);
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+}
+.card .icon { font-size: 1.6rem; }
+.card .step {
+    display: inline-block;
+    background: #2a78d6;
+    color: #ffffff;
+    border-radius: 999px;
+    width: 1.7rem;
+    height: 1.7rem;
+    line-height: 1.7rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.card h4 { margin: 0.5rem 0 0.3rem; padding: 0; font-size: 1.02rem; }
+.card p { margin: 0; opacity: 0.75; font-size: 0.9rem; line-height: 1.5; }
+.var-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.var-table th, .var-table td {
+    text-align: left;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+}
+.var-table th { opacity: 0.7; font-weight: 600; }
+.var-table code { font-size: 0.85rem; }
+.tag {
+    display: inline-block;
+    border-radius: 6px;
+    padding: 0.05rem 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.tag.cat { background: rgba(42, 120, 214, 0.15); color: #2a78d6; }
+.tag.num { background: rgba(27, 175, 122, 0.15); color: #1baf7a; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
-uploaded_file = st.file_uploader("CSV 파일 업로드", type="csv")
 
-# 파일을 아직 올리지 않았으면 여기서 멈춤
+def html(content):
+    """HTML 조각을 화면에 표시 (줄 앞 공백은 지워야 코드 블록으로 바뀌지 않음)"""
+    lines = [line.strip() for line in content.strip().splitlines()]
+    st.markdown("\n".join(line for line in lines if line), unsafe_allow_html=True)
+
+
+def cards(items):
+    """(아이콘, 제목, 설명) 목록을 카드 모양으로 표시"""
+    body = "".join(
+        f'<div class="card"><div class="icon">{icon}</div><h4>{title}</h4><p>{desc}</p></div>'
+        for icon, title, desc in items
+    )
+    html(f'<div class="card-grid">{body}</div>')
+
+
+# 변수 설명 (메인 페이지와 사이드바에서 사용)
+VARIABLE_INFO = [
+    ("gender", "성별", "범주형", "female / male"),
+    ("race/ethnicity", "인종/민족 그룹", "범주형", "group A ~ group E"),
+    ("parental level of education", "부모 학력", "범주형", "고등학교 중퇴 ~ 석사"),
+    ("lunch", "점심 유형", "범주형", "standard / free/reduced"),
+    ("test preparation course", "시험 준비 과정", "범주형", "completed / none"),
+    ("math score", "수학 점수", "수치형", "0 ~ 100점"),
+    ("reading score", "읽기 점수", "수치형", "0 ~ 100점"),
+    ("writing score", "쓰기 점수", "수치형", "0 ~ 100점"),
+]
+
+# -----------------------------------------------------------------------------
+# 사이드바: 실습 가이드
+
+with st.sidebar:
+    st.markdown("## 🧪 실습 가이드")
+    st.markdown(
+        "1. `StudentsPerformance.csv` 준비\n"
+        "2. 메인 화면에 파일 드래그 앤 드롭\n"
+        "3. 위쪽 탭을 눌러 분석 결과 살펴보기"
+    )
+    st.divider()
+    st.markdown("#### 💡 실습 팁")
+    st.markdown(
+        "- 차트에 마우스를 올리면 자세한 값이 보여요.\n"
+        "- 선택 상자와 슬라이더로 조건을 바꿔 보세요.\n"
+        "- 각 탭 아래 **분석 결과** 박스에서 해석을 확인하세요."
+    )
+
+# -----------------------------------------------------------------------------
+# 1. 메인 페이지와 파일 업로드
+
+uploaded_file = st.session_state.get("uploaded_csv")
+
 if uploaded_file is None:
-    st.info("파일을 업로드하면 분석 결과가 나타납니다.")
+    # 업로드 전: 큰 소개 배너
+    html(
+        """
+        <div class="hero">
+        <span class="badge">DATA ANALYSIS LAB · 데이터 분석 실습</span>
+        <h1>📊 학생 성적 데이터 분석</h1>
+        <p>학생 1,000명의 시험 점수 데이터를 직접 올리고, 통계와 시각화로 숨은 패턴을 찾아보세요.</p>
+        <div class="chips">
+        <span class="chip">👩‍🎓 학생 특성 5개</span>
+        <span class="chip">📝 과목 점수 3개</span>
+        <span class="chip">📈 분석 화면 6가지</span>
+        <span class="chip">🤖 분석 결과 자동 해석</span>
+        </div>
+        </div>
+        """
+    )
+else:
+    # 업로드 후: 작은 배너
+    html(
+        """
+        <div class="hero compact">
+        <span class="badge">DATA ANALYSIS LAB</span>
+        <h1>📊 학생 성적 데이터 분석</h1>
+        </div>
+        """
+    )
+
+html('<div class="section-title">📂 실습 데이터 업로드</div>')
+uploaded_file = st.file_uploader(
+    "CSV 파일 업로드",
+    type="csv",
+    key="uploaded_csv",
+    help="StudentsPerformance.csv 파일을 끌어다 놓거나 'Browse files'를 눌러 선택하세요.",
+)
+
+# 파일을 아직 올리지 않았으면 실습 안내를 보여주고 여기서 멈춤
+if uploaded_file is None:
+    st.caption("⬆️ 위 영역에 `StudentsPerformance.csv` 파일을 드래그 앤 드롭하면 분석이 시작됩니다.")
+
+    html('<div class="section-title">🚀 이렇게 진행해요</div>')
+    html(
+        """
+        <div class="card-grid">
+        <div class="card"><span class="step">1</span><h4>데이터 준비</h4>
+        <p>학생 성적 데이터 파일 <b>StudentsPerformance.csv</b>를 준비합니다.</p></div>
+        <div class="card"><span class="step">2</span><h4>파일 업로드</h4>
+        <p>위의 업로드 영역에 파일을 끌어다 놓으면 바로 분석이 시작됩니다.</p></div>
+        <div class="card"><span class="step">3</span><h4>탐색과 해석</h4>
+        <p>탭을 이동하며 차트를 살펴보고, 자동으로 정리된 분석 결과를 읽어 봅니다.</p></div>
+        </div>
+        """
+    )
+
+    html('<div class="section-title">🔍 무엇을 분석하나요?</div>')
+    html('<div class="section-desc">파일을 올리면 아래 6가지 분석 화면이 탭으로 열립니다.</div>')
+    cards(
+        [
+            ("📌", "분석 요약", "평균, 영향 요인, 성별 차이 등 핵심 결과를 한눈에 정리합니다."),
+            ("📈", "기초 통계", "평균·중앙값·표준편차와 히스토그램, 박스 플롯으로 분포를 살펴봅니다."),
+            ("📚", "과목 비교", "수학·읽기·쓰기 세 과목의 점수 분포를 나란히 비교합니다."),
+            ("👥", "그룹별 비교", "성별, 부모 학력 등 학생 특성에 따라 점수가 어떻게 다른지 봅니다."),
+            ("🔗", "상관관계", "과목 점수끼리 얼마나 함께 움직이는지 히트맵과 산점도로 확인합니다."),
+            ("🎯", "영향 요인", "어떤 특성이 점수에 가장 큰 영향을 주는지 순위로 비교합니다."),
+        ]
+    )
+
+    html('<div class="section-title">🗂️ 데이터 변수 안내</div>')
+    html('<div class="section-desc">범주형은 그룹을 나누는 변수, 수치형은 계산할 수 있는 숫자 변수입니다.</div>')
+    rows = "".join(
+        f'<tr><td><code>{col}</code></td><td>{name}</td>'
+        f'<td><span class="tag {"cat" if kind == "범주형" else "num"}">{kind}</span></td><td>{values}</td></tr>'
+        for col, name, kind, values in VARIABLE_INFO
+    )
+    html(
+        '<div style="overflow-x:auto"><table class="var-table">'
+        "<tr><th>열 이름</th><th>의미</th><th>종류</th><th>값의 예</th></tr>"
+        f"{rows}</table></div>"
+    )
+
+    html('<div class="section-title">🎓 이번 실습의 학습 목표</div>')
+    cards(
+        [
+            ("🧮", "기술 통계 이해", "평균, 중앙값, 표준편차, 사분위수가 무엇을 뜻하는지 이해합니다."),
+            ("🎨", "알맞은 차트 고르기", "분포, 비교, 관계에 따라 어떤 차트가 적합한지 익힙니다."),
+            ("💬", "데이터로 말하기", "숫자와 차트를 근거로 분석 결과를 문장으로 설명해 봅니다."),
+        ]
+    )
     st.stop()
 
 df = pd.read_csv(uploaded_file)
@@ -126,6 +339,14 @@ if missing:
 # 세 과목의 평균 점수 열을 새로 만듦
 df["average score"] = df[list(SCORE_COLS)].mean(axis=1).round(1)
 ALL_SCORES = [*SCORE_COLS, "average score"]
+
+st.success(f"✅ **{uploaded_file.name}** 파일을 불러왔습니다. 학생 {len(df):,}명 · 변수 {len(df.columns) - 1}개")
+
+# 사이드바에 데이터 정보 표시
+with st.sidebar:
+    st.divider()
+    st.markdown("#### 📄 불러온 데이터")
+    st.markdown(f"- 파일: `{uploaded_file.name}`\n- 행(학생 수): **{len(df):,}**\n- 결측치: **{int(df.isna().sum().sum())}개**")
 
 with st.expander("데이터 미리보기"):
     st.write(f"전체 {len(df):,}행 × {len(df.columns)}열 (마지막 'average score'는 세 과목 평균으로 새로 만든 '종합' 점수 열)")
